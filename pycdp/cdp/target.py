@@ -66,6 +66,9 @@ class TargetInfo:
     #: Frame id of originating window (is only set if target has an opener).
     opener_frame_id: typing.Optional[page.FrameId] = None
 
+    #: Id of the parent frame, only present for the "iframe" targets.
+    parent_frame_id: typing.Optional[page.FrameId] = None
+
     browser_context_id: typing.Optional[browser.BrowserContextID] = None
 
     #: Provides additional details for specific target types. For example, for
@@ -84,6 +87,8 @@ class TargetInfo:
             json['openerId'] = self.opener_id.to_json()
         if self.opener_frame_id is not None:
             json['openerFrameId'] = self.opener_frame_id.to_json()
+        if self.parent_frame_id is not None:
+            json['parentFrameId'] = self.parent_frame_id.to_json()
         if self.browser_context_id is not None:
             json['browserContextId'] = self.browser_context_id.to_json()
         if self.subtype is not None:
@@ -101,6 +106,7 @@ class TargetInfo:
             can_access_opener=bool(json['canAccessOpener']),
             opener_id=TargetID.from_json(json['openerId']) if json.get('openerId', None) is not None else None,
             opener_frame_id=page.FrameId.from_json(json['openerFrameId']) if json.get('openerFrameId', None) is not None else None,
+            parent_frame_id=page.FrameId.from_json(json['parentFrameId']) if json.get('parentFrameId', None) is not None else None,
             browser_context_id=browser.BrowserContextID.from_json(json['browserContextId']) if json.get('browserContextId', None) is not None else None,
             subtype=str(json['subtype']) if json.get('subtype', None) is not None else None,
         )
@@ -331,17 +337,23 @@ def create_browser_context(
     return browser.BrowserContextID.from_json(json['browserContextId'])
 
 
-def get_browser_contexts() -> typing.Generator[T_JSON_DICT,T_JSON_DICT,typing.List[browser.BrowserContextID]]:
+def get_browser_contexts() -> typing.Generator[T_JSON_DICT,T_JSON_DICT,typing.Tuple[typing.List[browser.BrowserContextID], typing.Optional[browser.BrowserContextID]]]:
     '''
     Returns all browser contexts created with ``Target.createBrowserContext`` method.
 
-    :returns: An array of browser context ids.
+    :returns: A tuple with the following items:
+
+        0. **browserContextIds** - An array of browser context ids.
+        1. **defaultBrowserContextId** - *(Optional)* The id of the default browser context if available.
     '''
     cmd_dict: T_JSON_DICT = {
         'method': 'Target.getBrowserContexts',
     }
     json = yield cmd_dict
-    return [browser.BrowserContextID.from_json(i) for i in json['browserContextIds']]
+    return (
+        [browser.BrowserContextID.from_json(i) for i in json['browserContextIds']],
+        browser.BrowserContextID.from_json(json['defaultBrowserContextId']) if json.get('defaultBrowserContextId', None) is not None else None
+    )
 
 
 def create_target(
@@ -355,7 +367,9 @@ def create_target(
         enable_begin_frame_control: typing.Optional[bool] = None,
         new_window: typing.Optional[bool] = None,
         background: typing.Optional[bool] = None,
-        for_tab: typing.Optional[bool] = None
+        for_tab: typing.Optional[bool] = None,
+        hidden: typing.Optional[bool] = None,
+        focus: typing.Optional[bool] = None
     ) -> typing.Generator[T_JSON_DICT,T_JSON_DICT,TargetID]:
     '''
     Creates a new page.
@@ -371,6 +385,8 @@ def create_target(
     :param new_window: *(Optional)* Whether to create a new Window or Tab (false by default, not supported by headless shell).
     :param background: *(Optional)* Whether to create the target in background or foreground (false by default, not supported by headless shell).
     :param for_tab: **(EXPERIMENTAL)** *(Optional)* Whether to create the target of type "tab".
+    :param hidden: **(EXPERIMENTAL)** *(Optional)* Whether to create a hidden target. The hidden target is observable via protocol, but not present in the tab UI strip. Cannot be created with ```forTab: true````, ````newWindow: true```` or ````background: false```. The life-time of the tab is limited to the life-time of the session.
+    :param focus: **(EXPERIMENTAL)** *(Optional)* If specified, the option is used to determine if the new target should be focused or not. By default, the focus behavior depends on the value of the background field. For example, background=false and focus=false will result in the target tab being opened but the browser window remain unchanged (if it was in the background, it will remain in the background) and background=false with focus=undefined will result in the window being focused. Using background: true and focus: true is not supported and will result in an error.
     :returns: The id of the page opened.
     '''
     params: T_JSON_DICT = dict()
@@ -395,6 +411,10 @@ def create_target(
         params['background'] = background
     if for_tab is not None:
         params['forTab'] = for_tab
+    if hidden is not None:
+        params['hidden'] = hidden
+    if focus is not None:
+        params['focus'] = focus
     cmd_dict: T_JSON_DICT = {
         'method': 'Target.createTarget',
         'params': params,
@@ -522,11 +542,14 @@ def set_auto_attach(
         filter_: typing.Optional[TargetFilter] = None
     ) -> typing.Generator[T_JSON_DICT,T_JSON_DICT,None]:
     '''
-    Controls whether to automatically attach to new targets which are considered to be related to
-    this one. When turned on, attaches to all existing related targets as well. When turned off,
+    Controls whether to automatically attach to new targets which are considered
+    to be directly related to this one (for example, iframes or workers).
+    When turned on, attaches to all existing related targets as well. When turned off,
     automatically detaches from all currently attached targets.
     This also clears all targets added by ``autoAttachRelated`` from the list of targets to watch
     for creation of related targets.
+    You might want to call this recursively for auto-attached targets to attach
+    to all available targets.
 
     :param auto_attach: Whether to auto-attach to related targets.
     :param wait_for_debugger_on_start: Whether to pause new targets when attaching to them. Use ```Runtime.runIfWaitingForDebugger``` to run paused targets.
@@ -617,6 +640,53 @@ def set_remote_locations(
         'params': params,
     }
     json = yield cmd_dict
+
+
+def get_dev_tools_target(
+        target_id: TargetID
+    ) -> typing.Generator[T_JSON_DICT,T_JSON_DICT,typing.Optional[TargetID]]:
+    '''
+    Gets the targetId of the DevTools page target opened for the given target
+    (if any).
+
+    **EXPERIMENTAL**
+
+    :param target_id: Page or tab target ID.
+    :returns: *(Optional)* The targetId of DevTools page target if exists.
+    '''
+    params: T_JSON_DICT = dict()
+    params['targetId'] = target_id.to_json()
+    cmd_dict: T_JSON_DICT = {
+        'method': 'Target.getDevToolsTarget',
+        'params': params,
+    }
+    json = yield cmd_dict
+    return TargetID.from_json(json['targetId']) if json.get('targetId', None) is not None else None
+
+
+def open_dev_tools(
+        target_id: TargetID,
+        panel_id: typing.Optional[str] = None
+    ) -> typing.Generator[T_JSON_DICT,T_JSON_DICT,TargetID]:
+    '''
+    Opens a DevTools window for the target.
+
+    **EXPERIMENTAL**
+
+    :param target_id: This can be the page or tab target ID.
+    :param panel_id: *(Optional)* The id of the panel we want DevTools to open initially. Currently supported panels are elements, console, network, sources, resources and performance.
+    :returns: The targetId of DevTools page target.
+    '''
+    params: T_JSON_DICT = dict()
+    params['targetId'] = target_id.to_json()
+    if panel_id is not None:
+        params['panelId'] = panel_id
+    cmd_dict: T_JSON_DICT = {
+        'method': 'Target.openDevTools',
+        'params': params,
+    }
+    json = yield cmd_dict
+    return TargetID.from_json(json['targetId'])
 
 
 @event_class('Target.attachedToTarget')

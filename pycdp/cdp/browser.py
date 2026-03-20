@@ -13,6 +13,7 @@ from .util import event_class, T_JSON_DICT
 
 from . import page
 from . import target
+from deprecated.sphinx import deprecated # type: ignore
 
 
 class BrowserContextID(str):
@@ -118,6 +119,9 @@ class PermissionType(enum.Enum):
     IDLE_DETECTION = "idleDetection"
     KEYBOARD_LOCK = "keyboardLock"
     LOCAL_FONTS = "localFonts"
+    LOCAL_NETWORK = "localNetwork"
+    LOCAL_NETWORK_ACCESS = "localNetworkAccess"
+    LOOPBACK_NETWORK = "loopbackNetwork"
     MIDI = "midi"
     MIDI_SYSEX = "midiSysex"
     NFC = "nfc"
@@ -219,6 +223,7 @@ class BrowserCommandId(enum.Enum):
     '''
     OPEN_TAB_SEARCH = "openTabSearch"
     CLOSE_TAB_SEARCH = "closeTabSearch"
+    OPEN_GLIC = "openGlic"
 
     def to_json(self) -> str:
         return self.value
@@ -293,20 +298,34 @@ class Histogram:
         )
 
 
+class PrivacySandboxAPI(enum.Enum):
+    BIDDING_AND_AUCTION_SERVICES = "BiddingAndAuctionServices"
+    TRUSTED_KEY_VALUE = "TrustedKeyValue"
+
+    def to_json(self) -> str:
+        return self.value
+
+    @classmethod
+    def from_json(cls, json: str) -> PrivacySandboxAPI:
+        return cls(json)
+
+
 def set_permission(
         permission: PermissionDescriptor,
         setting: PermissionSetting,
         origin: typing.Optional[str] = None,
+        embedded_origin: typing.Optional[str] = None,
         browser_context_id: typing.Optional[BrowserContextID] = None
     ) -> typing.Generator[T_JSON_DICT,T_JSON_DICT,None]:
     '''
-    Set permission settings for given origin.
+    Set permission settings for given embedding and embedded origins.
 
     **EXPERIMENTAL**
 
     :param permission: Descriptor of permission to override.
     :param setting: Setting of the permission.
-    :param origin: *(Optional)* Origin the permission applies to, all origins if not specified.
+    :param origin: *(Optional)* Embedding origin the permission applies to, all origins if not specified.
+    :param embedded_origin: *(Optional)* Embedded origin the permission applies to. It is ignored unless the embedding origin is present and valid. If the embedding origin is provided but the embedded origin isn't, the embedding origin is used as the embedded origin.
     :param browser_context_id: *(Optional)* Context to override. When omitted, default browser context is used.
     '''
     params: T_JSON_DICT = dict()
@@ -314,6 +333,8 @@ def set_permission(
     params['setting'] = setting.to_json()
     if origin is not None:
         params['origin'] = origin
+    if embedded_origin is not None:
+        params['embeddedOrigin'] = embedded_origin
     if browser_context_id is not None:
         params['browserContextId'] = browser_context_id.to_json()
     cmd_dict: T_JSON_DICT = {
@@ -323,13 +344,17 @@ def set_permission(
     json = yield cmd_dict
 
 
+@deprecated(version="1.3")
 def grant_permissions(
         permissions: typing.List[PermissionType],
         origin: typing.Optional[str] = None,
         browser_context_id: typing.Optional[BrowserContextID] = None
     ) -> typing.Generator[T_JSON_DICT,T_JSON_DICT,None]:
     '''
-    Grant specific permissions to the given origin and reject all others.
+    Grant specific permissions to the given origin and reject all others. Deprecated. Use
+    setPermission instead.
+
+    .. deprecated:: 1.3
 
     **EXPERIMENTAL**
 
@@ -619,6 +644,33 @@ def set_window_bounds(
     json = yield cmd_dict
 
 
+def set_contents_size(
+        window_id: WindowID,
+        width: typing.Optional[int] = None,
+        height: typing.Optional[int] = None
+    ) -> typing.Generator[T_JSON_DICT,T_JSON_DICT,None]:
+    '''
+    Set size of the browser contents resizing browser window as necessary.
+
+    **EXPERIMENTAL**
+
+    :param window_id: Browser window id.
+    :param width: *(Optional)* The window contents width in DIP. Assumes current width if omitted. Must be specified if 'height' is omitted.
+    :param height: *(Optional)* The window contents height in DIP. Assumes current height if omitted. Must be specified if 'width' is omitted.
+    '''
+    params: T_JSON_DICT = dict()
+    params['windowId'] = window_id.to_json()
+    if width is not None:
+        params['width'] = width
+    if height is not None:
+        params['height'] = height
+    cmd_dict: T_JSON_DICT = {
+        'method': 'Browser.setContentsSize',
+        'params': params,
+    }
+    json = yield cmd_dict
+
+
 def set_dock_tile(
         badge_label: typing.Optional[str] = None,
         image: typing.Optional[str] = None
@@ -680,6 +732,36 @@ def add_privacy_sandbox_enrollment_override(
     json = yield cmd_dict
 
 
+def add_privacy_sandbox_coordinator_key_config(
+        api: PrivacySandboxAPI,
+        coordinator_origin: str,
+        key_config: str,
+        browser_context_id: typing.Optional[BrowserContextID] = None
+    ) -> typing.Generator[T_JSON_DICT,T_JSON_DICT,None]:
+    '''
+    Configures encryption keys used with a given privacy sandbox API to talk
+    to a trusted coordinator.  Since this is intended for test automation only,
+    coordinatorOrigin must be a .test domain. No existing coordinator
+    configuration for the origin may exist.
+
+    :param api:
+    :param coordinator_origin:
+    :param key_config:
+    :param browser_context_id: *(Optional)* BrowserContext to perform the action in. When omitted, default browser context is used.
+    '''
+    params: T_JSON_DICT = dict()
+    params['api'] = api.to_json()
+    params['coordinatorOrigin'] = coordinator_origin
+    params['keyConfig'] = key_config
+    if browser_context_id is not None:
+        params['browserContextId'] = browser_context_id.to_json()
+    cmd_dict: T_JSON_DICT = {
+        'method': 'Browser.addPrivacySandboxCoordinatorKeyConfig',
+        'params': params,
+    }
+    json = yield cmd_dict
+
+
 @event_class('Browser.downloadWillBegin')
 @dataclass
 class DownloadWillBegin:
@@ -723,6 +805,10 @@ class DownloadProgress:
     received_bytes: float
     #: Download status.
     state: str
+    #: If download is "completed", provides the path of the downloaded file.
+    #: Depending on the platform, it is not guaranteed to be set, nor the file
+    #: is guaranteed to exist.
+    file_path: typing.Optional[str]
 
     @classmethod
     def from_json(cls, json: T_JSON_DICT) -> DownloadProgress:
@@ -730,5 +816,6 @@ class DownloadProgress:
             guid=str(json['guid']),
             total_bytes=float(json['totalBytes']),
             received_bytes=float(json['receivedBytes']),
-            state=str(json['state'])
+            state=str(json['state']),
+            file_path=str(json['filePath']) if json.get('filePath', None) is not None else None
         )

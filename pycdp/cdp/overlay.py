@@ -752,7 +752,6 @@ class InspectMode(enum.Enum):
     SEARCH_FOR_NODE = "searchForNode"
     SEARCH_FOR_UA_SHADOW_DOM = "searchForUAShadowDOM"
     CAPTURE_AREA_SCREENSHOT = "captureAreaScreenshot"
-    SHOW_DISTANCES = "showDistances"
     NONE = "none"
 
     def to_json(self) -> str:
@@ -761,6 +760,30 @@ class InspectMode(enum.Enum):
     @classmethod
     def from_json(cls, json: str) -> InspectMode:
         return cls(json)
+
+
+@dataclass
+class InspectedElementAnchorConfig:
+    #: Identifier of the node to highlight.
+    node_id: typing.Optional[dom.NodeId] = None
+
+    #: Identifier of the backend node to highlight.
+    backend_node_id: typing.Optional[dom.BackendNodeId] = None
+
+    def to_json(self) -> T_JSON_DICT:
+        json: T_JSON_DICT = dict()
+        if self.node_id is not None:
+            json['nodeId'] = self.node_id.to_json()
+        if self.backend_node_id is not None:
+            json['backendNodeId'] = self.backend_node_id.to_json()
+        return json
+
+    @classmethod
+    def from_json(cls, json: T_JSON_DICT) -> InspectedElementAnchorConfig:
+        return cls(
+            node_id=dom.NodeId.from_json(json['nodeId']) if json.get('nodeId', None) is not None else None,
+            backend_node_id=dom.BackendNodeId.from_json(json['backendNodeId']) if json.get('backendNodeId', None) is not None else None,
+        )
 
 
 def disable() -> typing.Generator[T_JSON_DICT,T_JSON_DICT,None]:
@@ -966,6 +989,9 @@ def highlight_rect(
     ) -> typing.Generator[T_JSON_DICT,T_JSON_DICT,None]:
     '''
     Highlights given rectangle. Coordinates are absolute with respect to the main frame viewport.
+    Issue: the method does not handle device pixel ratio (DPR) correctly.
+    The coordinates currently have to be adjusted by the client
+    if DPR is not 1 (see crbug.com/437807128).
 
     :param x: X coordinate
     :param y: Y coordinate
@@ -1166,6 +1192,21 @@ def set_show_container_query_overlays(
     params['containerQueryHighlightConfigs'] = [i.to_json() for i in container_query_highlight_configs]
     cmd_dict: T_JSON_DICT = {
         'method': 'Overlay.setShowContainerQueryOverlays',
+        'params': params,
+    }
+    json = yield cmd_dict
+
+
+def set_show_inspected_element_anchor(
+        inspected_element_anchor_config: InspectedElementAnchorConfig
+    ) -> typing.Generator[T_JSON_DICT,T_JSON_DICT,None]:
+    '''
+    :param inspected_element_anchor_config: Node identifier for which to show an anchor for.
+    '''
+    params: T_JSON_DICT = dict()
+    params['inspectedElementAnchorConfig'] = inspected_element_anchor_config.to_json()
+    cmd_dict: T_JSON_DICT = {
+        'method': 'Overlay.setShowInspectedElementAnchor',
         'params': params,
     }
     json = yield cmd_dict
@@ -1377,6 +1418,38 @@ class ScreenshotRequested:
     def from_json(cls, json: T_JSON_DICT) -> ScreenshotRequested:
         return cls(
             viewport=page.Viewport.from_json(json['viewport'])
+        )
+
+
+@event_class('Overlay.inspectPanelShowRequested')
+@dataclass
+class InspectPanelShowRequested:
+    '''
+    Fired when user asks to show the Inspect panel.
+    '''
+    #: Id of the node to show in the panel.
+    backend_node_id: dom.BackendNodeId
+
+    @classmethod
+    def from_json(cls, json: T_JSON_DICT) -> InspectPanelShowRequested:
+        return cls(
+            backend_node_id=dom.BackendNodeId.from_json(json['backendNodeId'])
+        )
+
+
+@event_class('Overlay.inspectedElementWindowRestored')
+@dataclass
+class InspectedElementWindowRestored:
+    '''
+    Fired when user asks to restore the Inspected Element floating window.
+    '''
+    #: Id of the node to restore the floating window for.
+    backend_node_id: dom.BackendNodeId
+
+    @classmethod
+    def from_json(cls, json: T_JSON_DICT) -> InspectedElementWindowRestored:
+        return cls(
+            backend_node_id=dom.BackendNodeId.from_json(json['backendNodeId'])
         )
 
 

@@ -1281,7 +1281,7 @@ class ScriptFailedToParse:
     execution_context_id: runtime.ExecutionContextId
     #: Content hash of the script, SHA-256.
     hash_: str
-    #: For Wasm modules, the content of the ``build_id`` custom section.
+    #: For Wasm modules, the content of the ``build_id`` custom section. For JavaScript the ``debugId`` magic comment.
     build_id: str
     #: Embedder-specific auxiliary data likely matching {isDefault: boolean, type: 'default'``'isolated'``'worker', frameId: string}
     execution_context_aux_data: typing.Optional[dict]
@@ -1349,7 +1349,7 @@ class ScriptParsed:
     execution_context_id: runtime.ExecutionContextId
     #: Content hash of the script, SHA-256.
     hash_: str
-    #: For Wasm modules, the content of the ``build_id`` custom section.
+    #: For Wasm modules, the content of the ``build_id`` custom section. For JavaScript the ``debugId`` magic comment.
     build_id: str
     #: Embedder-specific auxiliary data likely matching {isDefault: boolean, type: 'default'``'isolated'``'worker', frameId: string}
     execution_context_aux_data: typing.Optional[dict]

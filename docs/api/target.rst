@@ -86,9 +86,13 @@ to. For more information, see
 
 .. autofunction:: get_browser_contexts
 
+.. autofunction:: get_dev_tools_target
+
 .. autofunction:: get_target_info
 
 .. autofunction:: get_targets
+
+.. autofunction:: open_dev_tools
 
 .. autofunction:: send_message_to_target
 

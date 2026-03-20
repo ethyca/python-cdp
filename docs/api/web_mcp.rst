@@ -1,9 +1,9 @@
-ServiceWorker
-=============
+WebMCP
+======
 
 *This CDP domain is experimental.*
 
-.. module:: cdp.service_worker
+.. module:: cdp.web_mcp
 
 * Types_
 * Commands_
@@ -17,32 +17,12 @@ yourself. Instead, the API creates objects for you as return
 values from commands, and then you can use those objects as
 arguments to other commands.
 
-.. autoclass:: RegistrationID
+.. autoclass:: Annotation
       :members:
       :undoc-members:
       :exclude-members: from_json, to_json
 
-.. autoclass:: ServiceWorkerRegistration
-      :members:
-      :undoc-members:
-      :exclude-members: from_json, to_json
-
-.. autoclass:: ServiceWorkerVersionRunningStatus
-      :members:
-      :undoc-members:
-      :exclude-members: from_json, to_json
-
-.. autoclass:: ServiceWorkerVersionStatus
-      :members:
-      :undoc-members:
-      :exclude-members: from_json, to_json
-
-.. autoclass:: ServiceWorkerVersion
-      :members:
-      :undoc-members:
-      :exclude-members: from_json, to_json
-
-.. autoclass:: ServiceWorkerErrorMessage
+.. autoclass:: Tool
       :members:
       :undoc-members:
       :exclude-members: from_json, to_json
@@ -59,29 +39,7 @@ commands, and ``z`` is the return type you should pay attention
 to. For more information, see
 :ref:`Getting Started: Commands <getting-started-commands>`.
 
-.. autofunction:: deliver_push_message
-
-.. autofunction:: disable
-
-.. autofunction:: dispatch_periodic_sync_event
-
-.. autofunction:: dispatch_sync_event
-
 .. autofunction:: enable
-
-.. autofunction:: set_force_update_on_page_load
-
-.. autofunction:: skip_waiting
-
-.. autofunction:: start_worker
-
-.. autofunction:: stop_all_workers
-
-.. autofunction:: stop_worker
-
-.. autofunction:: unregister
-
-.. autofunction:: update_registration
 
 Events
 ------
@@ -90,17 +48,12 @@ Generally, you do not need to instantiate CDP events
 yourself. Instead, the API creates events for you and then
 you use the event's attributes.
 
-.. autoclass:: WorkerErrorReported
+.. autoclass:: ToolsAdded
       :members:
       :undoc-members:
       :exclude-members: from_json, to_json
 
-.. autoclass:: WorkerRegistrationUpdated
-      :members:
-      :undoc-members:
-      :exclude-members: from_json, to_json
-
-.. autoclass:: WorkerVersionUpdated
+.. autoclass:: ToolsRemoved
       :members:
       :undoc-members:
       :exclude-members: from_json, to_json

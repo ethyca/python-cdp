@@ -11,6 +11,7 @@ import typing
 from dataclasses import dataclass
 from .util import event_class, T_JSON_DICT
 
+from . import network
 from . import page
 from . import runtime
 from deprecated.sphinx import deprecated # type: ignore
@@ -45,6 +46,21 @@ class BackendNodeId(int):
 
     def __repr__(self):
         return 'BackendNodeId({})'.format(super().__repr__())
+
+
+class StyleSheetId(str):
+    '''
+    Unique identifier for a CSS stylesheet.
+    '''
+    def to_json(self) -> str:
+        return self
+
+    @classmethod
+    def from_json(cls, json: str) -> StyleSheetId:
+        return cls(json)
+
+    def __repr__(self):
+        return 'StyleSheetId({})'.format(super().__repr__())
 
 
 @dataclass
@@ -85,7 +101,9 @@ class PseudoType(enum.Enum):
     CHECKMARK = "checkmark"
     BEFORE = "before"
     AFTER = "after"
+    EXPAND_ICON = "expand-icon"
     PICKER_ICON = "picker-icon"
+    INTEREST_HINT = "interest-hint"
     MARKER = "marker"
     BACKDROP = "backdrop"
     COLUMN = "column"
@@ -110,12 +128,15 @@ class PseudoType(enum.Enum):
     VIEW_TRANSITION = "view-transition"
     VIEW_TRANSITION_GROUP = "view-transition-group"
     VIEW_TRANSITION_IMAGE_PAIR = "view-transition-image-pair"
+    VIEW_TRANSITION_GROUP_CHILDREN = "view-transition-group-children"
     VIEW_TRANSITION_OLD = "view-transition-old"
     VIEW_TRANSITION_NEW = "view-transition-new"
     PLACEHOLDER = "placeholder"
     FILE_SELECTOR_BUTTON = "file-selector-button"
     DETAILS_CONTENT = "details-content"
     PICKER = "picker"
+    PERMISSION_ICON = "permission-icon"
+    OVERSCROLL_AREA_PARENT = "overscroll-area-parent"
 
     def to_json(self) -> str:
         return self.value
@@ -308,6 +329,12 @@ class Node:
 
     is_scrollable: typing.Optional[bool] = None
 
+    affected_by_starting_styles: typing.Optional[bool] = None
+
+    adopted_style_sheets: typing.Optional[typing.List[StyleSheetId]] = None
+
+    ad_provenance: typing.Optional[network.AdProvenance] = None
+
     def to_json(self) -> T_JSON_DICT:
         json: T_JSON_DICT = dict()
         json['nodeId'] = self.node_id.to_json()
@@ -368,6 +395,12 @@ class Node:
             json['assignedSlot'] = self.assigned_slot.to_json()
         if self.is_scrollable is not None:
             json['isScrollable'] = self.is_scrollable
+        if self.affected_by_starting_styles is not None:
+            json['affectedByStartingStyles'] = self.affected_by_starting_styles
+        if self.adopted_style_sheets is not None:
+            json['adoptedStyleSheets'] = [i.to_json() for i in self.adopted_style_sheets]
+        if self.ad_provenance is not None:
+            json['adProvenance'] = self.ad_provenance.to_json()
         return json
 
     @classmethod
@@ -405,6 +438,9 @@ class Node:
             compatibility_mode=CompatibilityMode.from_json(json['compatibilityMode']) if json.get('compatibilityMode', None) is not None else None,
             assigned_slot=BackendNode.from_json(json['assignedSlot']) if json.get('assignedSlot', None) is not None else None,
             is_scrollable=bool(json['isScrollable']) if json.get('isScrollable', None) is not None else None,
+            affected_by_starting_styles=bool(json['affectedByStartingStyles']) if json.get('affectedByStartingStyles', None) is not None else None,
+            adopted_style_sheets=[StyleSheetId.from_json(i) for i in json['adoptedStyleSheets']] if json.get('adoptedStyleSheets', None) is not None else None,
+            ad_provenance=network.AdProvenance.from_json(json['adProvenance']) if json.get('adProvenance', None) is not None else None,
         )
 
 
@@ -1015,7 +1051,8 @@ def get_node_for_location(
 def get_outer_html(
         node_id: typing.Optional[NodeId] = None,
         backend_node_id: typing.Optional[BackendNodeId] = None,
-        object_id: typing.Optional[runtime.RemoteObjectId] = None
+        object_id: typing.Optional[runtime.RemoteObjectId] = None,
+        include_shadow_dom: typing.Optional[bool] = None
     ) -> typing.Generator[T_JSON_DICT,T_JSON_DICT,str]:
     '''
     Returns node's HTML markup.
@@ -1023,6 +1060,7 @@ def get_outer_html(
     :param node_id: *(Optional)* Identifier of the node.
     :param backend_node_id: *(Optional)* Identifier of the backend node.
     :param object_id: *(Optional)* JavaScript object id of the node wrapper.
+    :param include_shadow_dom: **(EXPERIMENTAL)** *(Optional)* Include all shadow roots. Equals to false if not specified.
     :returns: Outer HTML markup.
     '''
     params: T_JSON_DICT = dict()
@@ -1032,6 +1070,8 @@ def get_outer_html(
         params['backendNodeId'] = backend_node_id.to_json()
     if object_id is not None:
         params['objectId'] = object_id.to_json()
+    if include_shadow_dom is not None:
+        params['includeShadowDOM'] = include_shadow_dom
     cmd_dict: T_JSON_DICT = {
         'method': 'DOM.getOuterHTML',
         'params': params,
@@ -1725,14 +1765,15 @@ def get_container_for_node(
         container_name: typing.Optional[str] = None,
         physical_axes: typing.Optional[PhysicalAxes] = None,
         logical_axes: typing.Optional[LogicalAxes] = None,
-        queries_scroll_state: typing.Optional[bool] = None
+        queries_scroll_state: typing.Optional[bool] = None,
+        queries_anchored: typing.Optional[bool] = None
     ) -> typing.Generator[T_JSON_DICT,T_JSON_DICT,typing.Optional[NodeId]]:
     '''
     Returns the query container of the given node based on container query
     conditions: containerName, physical and logical axes, and whether it queries
-    scroll-state. If no axes are provided and queriesScrollState is false, the
-    style container is returned, which is the direct parent or the closest
-    element with a matching container-name.
+    scroll-state or anchored elements. If no axes are provided and
+    queriesScrollState is false, the style container is returned, which is the
+    direct parent or the closest element with a matching container-name.
 
     **EXPERIMENTAL**
 
@@ -1741,6 +1782,7 @@ def get_container_for_node(
     :param physical_axes: *(Optional)*
     :param logical_axes: *(Optional)*
     :param queries_scroll_state: *(Optional)*
+    :param queries_anchored: *(Optional)*
     :returns: *(Optional)* The container node for the given node, or null if not found.
     '''
     params: T_JSON_DICT = dict()
@@ -1753,6 +1795,8 @@ def get_container_for_node(
         params['logicalAxes'] = logical_axes.to_json()
     if queries_scroll_state is not None:
         params['queriesScrollState'] = queries_scroll_state
+    if queries_anchored is not None:
+        params['queriesAnchored'] = queries_anchored
     cmd_dict: T_JSON_DICT = {
         'method': 'DOM.getContainerForNode',
         'params': params,
@@ -1809,6 +1853,31 @@ def get_anchor_element(
     return NodeId.from_json(json['nodeId'])
 
 
+def force_show_popover(
+        node_id: NodeId,
+        enable: bool
+    ) -> typing.Generator[T_JSON_DICT,T_JSON_DICT,typing.List[NodeId]]:
+    '''
+    When enabling, this API force-opens the popover identified by nodeId
+    and keeps it open until disabled.
+
+    **EXPERIMENTAL**
+
+    :param node_id: Id of the popover HTMLElement
+    :param enable: If true, opens the popover and keeps it open. If false, closes the popover if it was previously force-opened.
+    :returns: List of popovers that were closed in order to respect popover stacking order.
+    '''
+    params: T_JSON_DICT = dict()
+    params['nodeId'] = node_id.to_json()
+    params['enable'] = enable
+    cmd_dict: T_JSON_DICT = {
+        'method': 'DOM.forceShowPopover',
+        'params': params,
+    }
+    json = yield cmd_dict
+    return [NodeId.from_json(i) for i in json['nodeIds']]
+
+
 @event_class('DOM.attributeModified')
 @dataclass
 class AttributeModified:
@@ -1828,6 +1897,27 @@ class AttributeModified:
             node_id=NodeId.from_json(json['nodeId']),
             name=str(json['name']),
             value=str(json['value'])
+        )
+
+
+@event_class('DOM.adoptedStyleSheetsModified')
+@dataclass
+class AdoptedStyleSheetsModified:
+    '''
+    **EXPERIMENTAL**
+
+    Fired when ``Element``'s adoptedStyleSheets are modified.
+    '''
+    #: Id of the node that has changed.
+    node_id: NodeId
+    #: New adoptedStyleSheets array.
+    adopted_style_sheets: typing.List[StyleSheetId]
+
+    @classmethod
+    def from_json(cls, json: T_JSON_DICT) -> AdoptedStyleSheetsModified:
+        return cls(
+            node_id=NodeId.from_json(json['nodeId']),
+            adopted_style_sheets=[StyleSheetId.from_json(i) for i in json['adoptedStyleSheets']]
         )
 
 
@@ -2039,6 +2129,48 @@ class ScrollableFlagUpdated:
         return cls(
             node_id=NodeId.from_json(json['nodeId']),
             is_scrollable=bool(json['isScrollable'])
+        )
+
+
+@event_class('DOM.adRelatedStateUpdated')
+@dataclass
+class AdRelatedStateUpdated:
+    '''
+    **EXPERIMENTAL**
+
+    Fired when a node's ad related state changes.
+    '''
+    #: The id of the node.
+    node_id: NodeId
+    #: The provenance of the ad related node, if it is ad related.
+    ad_provenance: typing.Optional[network.AdProvenance]
+
+    @classmethod
+    def from_json(cls, json: T_JSON_DICT) -> AdRelatedStateUpdated:
+        return cls(
+            node_id=NodeId.from_json(json['nodeId']),
+            ad_provenance=network.AdProvenance.from_json(json['adProvenance']) if json.get('adProvenance', None) is not None else None
+        )
+
+
+@event_class('DOM.affectedByStartingStylesFlagUpdated')
+@dataclass
+class AffectedByStartingStylesFlagUpdated:
+    '''
+    **EXPERIMENTAL**
+
+    Fired when a node's starting styles changes.
+    '''
+    #: The id of the node.
+    node_id: NodeId
+    #: If the node has starting styles.
+    affected_by_starting_styles: bool
+
+    @classmethod
+    def from_json(cls, json: T_JSON_DICT) -> AffectedByStartingStylesFlagUpdated:
+        return cls(
+            node_id=NodeId.from_json(json['nodeId']),
+            affected_by_starting_styles=bool(json['affectedByStartingStyles'])
         )
 
 

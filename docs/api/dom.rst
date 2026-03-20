@@ -33,6 +33,11 @@ arguments to other commands.
       :undoc-members:
       :exclude-members: from_json, to_json
 
+.. autoclass:: StyleSheetId
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
 .. autoclass:: BackendNode
       :members:
       :undoc-members:
@@ -133,6 +138,8 @@ to. For more information, see
 .. autofunction:: enable
 
 .. autofunction:: focus
+
+.. autofunction:: force_show_popover
 
 .. autofunction:: get_anchor_element
 
@@ -236,6 +243,11 @@ you use the event's attributes.
       :undoc-members:
       :exclude-members: from_json, to_json
 
+.. autoclass:: AdoptedStyleSheetsModified
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
 .. autoclass:: AttributeRemoved
       :members:
       :undoc-members:
@@ -287,6 +299,16 @@ you use the event's attributes.
       :exclude-members: from_json, to_json
 
 .. autoclass:: ScrollableFlagUpdated
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: AdRelatedStateUpdated
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: AffectedByStartingStylesFlagUpdated
       :members:
       :undoc-members:
       :exclude-members: from_json, to_json

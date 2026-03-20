@@ -88,6 +88,11 @@ arguments to other commands.
       :undoc-members:
       :exclude-members: from_json, to_json
 
+.. autoclass:: RenderBlockingBehavior
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
 .. autoclass:: PostDataEntry
       :members:
       :undoc-members:
@@ -283,6 +288,16 @@ arguments to other commands.
       :undoc-members:
       :exclude-members: from_json, to_json
 
+.. autoclass:: NetworkConditions
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: BlockPattern
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
 .. autoclass:: DirectSocketDnsQueryType
       :members:
       :undoc-members:
@@ -293,7 +308,17 @@ arguments to other commands.
       :undoc-members:
       :exclude-members: from_json, to_json
 
-.. autoclass:: PrivateNetworkRequestPolicy
+.. autoclass:: DirectUDPSocketOptions
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: DirectUDPMessage
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: LocalNetworkAccessRequestPolicy
       :members:
       :undoc-members:
       :exclude-members: from_json, to_json
@@ -309,6 +334,21 @@ arguments to other commands.
       :exclude-members: from_json, to_json
 
 .. autoclass:: ClientSecurityState
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: AdScriptIdentifier
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: AdAncestry
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: AdProvenance
       :members:
       :undoc-members:
       :exclude-members: from_json, to_json
@@ -368,6 +408,71 @@ arguments to other commands.
       :undoc-members:
       :exclude-members: from_json, to_json
 
+.. autoclass:: DeviceBoundSessionKey
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: DeviceBoundSessionWithUsage
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: DeviceBoundSessionCookieCraving
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: DeviceBoundSessionUrlRule
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: DeviceBoundSessionInclusionRules
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: DeviceBoundSession
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: DeviceBoundSessionEventId
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: DeviceBoundSessionFetchResult
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: DeviceBoundSessionFailedRequest
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: CreationEventDetails
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: RefreshEventDetails
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: TerminationEventDetails
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: ChallengeEventDetails
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
 .. autoclass:: LoadNetworkResourcePageResult
       :members:
       :undoc-members:
@@ -402,6 +507,8 @@ to. For more information, see
 
 .. autofunction:: clear_browser_cookies
 
+.. autofunction:: configure_durable_messages
+
 .. autofunction:: continue_intercepted_request
 
 .. autofunction:: delete_cookies
@@ -410,9 +517,15 @@ to. For more information, see
 
 .. autofunction:: emulate_network_conditions
 
+.. autofunction:: emulate_network_conditions_by_rule
+
 .. autofunction:: enable
 
+.. autofunction:: enable_device_bound_sessions
+
 .. autofunction:: enable_reporting_api
+
+.. autofunction:: fetch_schemeful_site
 
 .. autofunction:: get_all_cookies
 
@@ -429,6 +542,8 @@ to. For more information, see
 .. autofunction:: get_security_isolation_status
 
 .. autofunction:: load_network_resource
+
+.. autofunction:: override_network_state
 
 .. autofunction:: replay_xhr
 
@@ -587,6 +702,56 @@ you use the event's attributes.
       :undoc-members:
       :exclude-members: from_json, to_json
 
+.. autoclass:: DirectTCPSocketChunkSent
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: DirectTCPSocketChunkReceived
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: DirectUDPSocketJoinedMulticastGroup
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: DirectUDPSocketLeftMulticastGroup
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: DirectUDPSocketCreated
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: DirectUDPSocketOpened
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: DirectUDPSocketAborted
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: DirectUDPSocketClosed
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: DirectUDPSocketChunkSent
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: DirectUDPSocketChunkReceived
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
 .. autoclass:: RequestWillBeSentExtraInfo
       :members:
       :undoc-members:
@@ -612,26 +777,6 @@ you use the event's attributes.
       :undoc-members:
       :exclude-members: from_json, to_json
 
-.. autoclass:: SubresourceWebBundleMetadataReceived
-      :members:
-      :undoc-members:
-      :exclude-members: from_json, to_json
-
-.. autoclass:: SubresourceWebBundleMetadataError
-      :members:
-      :undoc-members:
-      :exclude-members: from_json, to_json
-
-.. autoclass:: SubresourceWebBundleInnerResponseParsed
-      :members:
-      :undoc-members:
-      :exclude-members: from_json, to_json
-
-.. autoclass:: SubresourceWebBundleInnerResponseError
-      :members:
-      :undoc-members:
-      :exclude-members: from_json, to_json
-
 .. autoclass:: ReportingApiReportAdded
       :members:
       :undoc-members:
@@ -643,6 +788,16 @@ you use the event's attributes.
       :exclude-members: from_json, to_json
 
 .. autoclass:: ReportingApiEndpointsChangedForOrigin
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: DeviceBoundSessionsAdded
+      :members:
+      :undoc-members:
+      :exclude-members: from_json, to_json
+
+.. autoclass:: DeviceBoundSessionEventOccurred
       :members:
       :undoc-members:
       :exclude-members: from_json, to_json

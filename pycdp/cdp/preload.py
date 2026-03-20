@@ -73,6 +73,10 @@ class RuleSet:
     #: TODO(https://crbug.com/1425354): Replace this property with structured error.
     error_message: typing.Optional[str] = None
 
+    #: For more details, see:
+    #: https://github.com/WICG/nav-speculation/blob/main/speculation-rules-tags.md
+    tag: typing.Optional[str] = None
+
     def to_json(self) -> T_JSON_DICT:
         json: T_JSON_DICT = dict()
         json['id'] = self.id_.to_json()
@@ -88,6 +92,8 @@ class RuleSet:
             json['errorType'] = self.error_type.to_json()
         if self.error_message is not None:
             json['errorMessage'] = self.error_message
+        if self.tag is not None:
+            json['tag'] = self.tag
         return json
 
     @classmethod
@@ -101,12 +107,14 @@ class RuleSet:
             request_id=network.RequestId.from_json(json['requestId']) if json.get('requestId', None) is not None else None,
             error_type=RuleSetErrorType.from_json(json['errorType']) if json.get('errorType', None) is not None else None,
             error_message=str(json['errorMessage']) if json.get('errorMessage', None) is not None else None,
+            tag=str(json['tag']) if json.get('tag', None) is not None else None,
         )
 
 
 class RuleSetErrorType(enum.Enum):
     SOURCE_IS_NOT_JSON_OBJECT = "SourceIsNotJsonObject"
     INVALID_RULES_SKIPPED = "InvalidRulesSkipped"
+    INVALID_RULESET_LEVEL_TAG = "InvalidRulesetLevelTag"
 
     def to_json(self) -> str:
         return self.value
@@ -124,6 +132,7 @@ class SpeculationAction(enum.Enum):
     '''
     PREFETCH = "Prefetch"
     PRERENDER = "Prerender"
+    PRERENDER_UNTIL_SCRIPT = "PrerenderUntilScript"
 
     def to_json(self) -> str:
         return self.value
@@ -248,7 +257,6 @@ class PrerenderFinalStatus(enum.Enum):
     INVALID_SCHEME_REDIRECT = "InvalidSchemeRedirect"
     INVALID_SCHEME_NAVIGATION = "InvalidSchemeNavigation"
     NAVIGATION_REQUEST_BLOCKED_BY_CSP = "NavigationRequestBlockedByCsp"
-    MAIN_FRAME_NAVIGATION = "MainFrameNavigation"
     MOJO_BINDER_POLICY = "MojoBinderPolicy"
     RENDERER_PROCESS_CRASHED = "RendererProcessCrashed"
     RENDERER_PROCESS_KILLED = "RendererProcessKilled"
@@ -316,6 +324,7 @@ class PrerenderFinalStatus(enum.Enum):
     V8_OPTIMIZER_DISABLED = "V8OptimizerDisabled"
     PRERENDER_FAILED_DURING_PREFETCH = "PrerenderFailedDuringPrefetch"
     BROWSING_DATA_REMOVED = "BrowsingDataRemoved"
+    PRERENDER_HOST_REUSED = "PrerenderHostReused"
 
     def to_json(self) -> str:
         return self.value
@@ -356,6 +365,7 @@ class PrefetchStatus(enum.Enum):
     PREFETCH_FAILED_MIME_NOT_SUPPORTED = "PrefetchFailedMIMENotSupported"
     PREFETCH_FAILED_NET_ERROR = "PrefetchFailedNetError"
     PREFETCH_FAILED_NON2_XX = "PrefetchFailedNon2XX"
+    PREFETCH_EVICTED_AFTER_BROWSING_DATA_REMOVED = "PrefetchEvictedAfterBrowsingDataRemoved"
     PREFETCH_EVICTED_AFTER_CANDIDATE_REMOVED = "PrefetchEvictedAfterCandidateRemoved"
     PREFETCH_EVICTED_FOR_NEWER_PREFETCH = "PrefetchEvictedForNewerPrefetch"
     PREFETCH_HELDBACK = "PrefetchHeldback"
